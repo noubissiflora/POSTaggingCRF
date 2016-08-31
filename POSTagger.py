@@ -21,8 +21,10 @@ from nltk.tag import CRFTagger
 
 from nltk.corpus import  PlaintextCorpusReader 
 
+import shutil
 import sys
 import struct
+import os
 #from test import  DataProcessing
 
  
@@ -99,60 +101,75 @@ def construct_data (path):
        
     return train_data, test_data, gold_sent
 
-
-if __name__ == '__main__':
-
-#INSTANTIER LE MODEL
-    ct = CRFTagger()
-    
-#RECUPERER LE CHEMIN DU 
-    data_path = str(sys.argv[1])
-    train_data, test_data, gold_sent = construct_data(data_path) 
-    print("training_model....")
-   # print(train_data)
-    
-#ENTRAINER LE MODELE
-    ct.train(train_data,'model.crf.tagger')
-    print("model_trained")
-#STOCKER LE MODELE
-    fichier = open("model.crf.tagger", "r")
-    
-#FICHIER TEXTE DANS LEQUEL ON DOIT SAUVEGARDER LE MODELE
-    ficher2 =open("model","w")
-  
-  
-  # CONVERTIR LE FICHIER BINAIRE EN FICHIER TEXTE
+def stockage_model (model_file, model_text):
+      
+# CONVERTIR LE FICHIER BINAIRE EN FICHIER TEXTE
+    file =open(model_text,"w")
+    file_model = open(model_file, "r")
     try:
         s = struct.Struct("<dffflfffffffl") # Binary data format
         while True:
-            record = fichier.read(56)
+            record = file_model.read(56)
             if len(record) != 56:
                 break
  
+# DECODAGE DE L'ENREGISTREMENT SITUE DANS LE FICHIER BINAIRE
             p= s.unpack(record) # Decode ("unpack")
            
-            #print(p)
-            ficher2.write('(')
+#STOCKAGE DES POIDS DECODES DANS UN FICHIER TEXTE
+            file.write('(')
             for w in p :
-                ficher2.write(str(w))
-                ficher2.write(',')
-            ficher2.write(')')
-            ficher2.newlines
+                file.write(str(w))
+                file.write(',')
+            file.write(')')
+            file.newlines
             
     except IOError:
         # Your error handling here
         # Nothing for this example
             pass
     finally:
-        fichier.close()
-        ficher2.close()
+        file_model.close()
+        file.close()
    # print("stop")
     #print(p)
    # print(len(p))
+    return file
+
+
+if __name__ == '__main__':
+
+#INSTANTIER LE MODEL
+    ct = CRFTagger()
+   
+#RECUPERER LE CHEMIN VERS LE CORPUS
+    data_path = str(sys.argv[1])
+    train_data, test_data, gold_sent = construct_data(data_path) 
+    print("training_model....")
+   # print(train_data)
+    #model.crf.tagger
     
-    
+#ENTRAINER LE MODELE ET LE STOCKER DANS UN FICHIER
+    if sys.argv[2].lower() == "train":
+              
+        ct.train(train_data,'model')          
+        print("model_trained")
+       
+    #STOCKAGE DU MODELE DANS UN FICHIER TEXXTE
+        print("stockage du modele dans un fichier texte")
+        ficher2 =stockage_model("model", "modele")
+    else:
+        #VERIFIER SI LE MODEL FILE EXISTE DEJA
+        if os.path.isfile("./model"): 
+            ct.set_model_file('model')
+            
+         #SINON RETOURNER UN MESSAGE D'ERREUR  
+        else:
+            print("Aucun modele entrainr pour le moment. Preciser 'train' comme second arg pour entrainer le modele")
+            sys.exit(0) 
 #TEST DU MODELE
-    ct.set_model_file('model.crf.tagger')
+   # ct1 = CRFTagger()
+    ct.set_model_file('model')
     print("tagging_texte....")
     test=ct.tag_sents(test_data)
     print("texte_tagged")
@@ -171,7 +188,7 @@ if __name__ == '__main__':
     
    # source_gold.close()
    
-  
+    
     
     
     
